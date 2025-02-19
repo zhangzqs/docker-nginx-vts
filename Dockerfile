@@ -1,13 +1,16 @@
-FROM nginx:1.22.1
+FROM nginx:1.26.3
 
-ENV NGINX_VERSION     "1.22.1"
-ENV NGINX_VTS_VERSION "0.2.2"
+ENV NGINX_VERSION="1.26.3"
+ENV NGINX_VTS_VERSION="0.2.3"
 
-RUN apt-get update && apt-get install -y gnupg2 && curl http://nginx.org/packages/keys/nginx_signing.key | apt-key add -
-
-RUN echo "deb-src http://nginx.org/packages/debian/ bullseye nginx" >> /etc/apt/sources.list \
+RUN apt-get update \
+  && apt-get install -y --no-install-recommends gnupg2 lsb-release \
+  && curl https://nginx.org/keys/nginx_signing.key \
+  | gpg --dearmor -o /usr/share/keyrings/nginx-archive-keyring.gpg \
+  && echo "deb-src [signed-by=/usr/share/keyrings/nginx-archive-keyring.gpg] \
+  http://nginx.org/packages/debian `lsb_release -cs` nginx" > /etc/apt/sources.list.d/nginx.list \
   && apt-get update \
-  && apt-get install -y dpkg-dev curl \
+  && apt-get install -y --no-install-recommends dpkg-dev curl \
   && mkdir -p /opt/rebuildnginx \
   && chmod 0777 /opt/rebuildnginx \
   && cd /opt/rebuildnginx \
@@ -22,7 +25,7 @@ RUN cd /opt \
   && cd /opt/rebuildnginx/nginx-${NGINX_VERSION} \
   && dpkg-buildpackage -b \
   && cd /opt/rebuildnginx \
-  && dpkg --install nginx_${NGINX_VERSION}-1~bullseye_amd64.deb \
+  && dpkg --install nginx_${NGINX_VERSION}-1~$(lsb_release -cs)_amd64.deb \
   && apt-get remove --purge -y dpkg-dev curl && apt-get -y --purge autoremove && rm -rf /var/lib/apt/lists/*
 
 CMD ["nginx", "-g", "daemon off;"]
